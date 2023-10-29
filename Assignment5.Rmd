@@ -1,0 +1,143 @@
+---
+title: "Assignment5_APrakash"
+output: html_document
+date: "2023-10-29"
+---
+
+```{r}
+#Business Forecasting Assignment 5 - Decomposition - Aarthi Prakash
+
+#Creating Time series from data points
+library(fpp)
+library(fpp2)
+
+#Import Updated Data
+TotalRevenueForHospitalsData <- read.csv("~/Documents/Rutgers MBA 2022/Fall 2023/[0] Business Forecasting/Week 3/Assignment3/TotalRevenueForHospitalsData.csv", header=FALSE)
+View(TotalRevenueForHospitalsData)
+
+TotalRevenueForHospitalsData = TotalRevenueForHospitalsData[-1,]
+TotalRevenueForHospitalsData$V2 <- as.numeric(TotalRevenueForHospitalsData$V2)
+#colnames(TotalRevenueForHospitalsData) <- ('Date','TotalRevenue')
+str(TotalRevenueForHospitalsData)
+
+HospitalRevenue_ts <- ts(TotalRevenueForHospitalsData$V2, frequency = 4, start = c(2004,4))
+HospitalRevenue_ts
+
+
+#Decomposition Commands
+#stl_decomp Takes 2 Arguments
+?stl
+stl_decomp <- stl(HospitalRevenue_ts,s.window ="periodic")
+#needs time series for decomposition, s.window is either periodic or has to be odd and >7
+#Generally use periodic always
+
+# Table View
+stl_decomp
+#Prints a lot of data - seasonality, trend, remainder = C + I together
+attributes(stl_decomp) #see other values this stores - 
+stl_decomp$time.series
+stl_decomp$weights
+stl_decomp$call
+stl_decomp$win
+stl_decomp$deg
+stl_decomp$jump
+stl_decomp$inner
+stl_decomp$outer
+
+# Graph View
+plot(stl_decomp)
+#How to read graph
+#Find the highest and lowest in trend - 15000 to 30000 - trend is upwards and very similar to the data
+
+#Print out a seasonal adjustment
+tmp <- seasadj(stl_decomp)
+# shows seasonally adjusted data
+plot(tmp) #plots seasonaly adjusted data
+
+# Plot a line on the graph
+plot(HospitalRevenue_ts)
+lines(seasadj(stl_decomp), col = 'purple')
+
+plot(HospitalRevenue_ts)
+lines(tmp, col = 'purple')    
+#When plotting the original time series and the seasonally adjusted line - they are very similar
+
+#Forecast with the seasonally adjusted data
+#Default period forecast
+f_stl <- forecast(stl_decomp)
+
+# you can pass the # of period - 15 months
+f_stl <- forecast(stl_decomp,h=12)
+
+#Print it out or graph it
+f_stl
+plot(f_stl)
+#plot is synthesizing using the components - starts looking like the historical data itself
+accuracy(f_stl) #MAPE is 1.523904 which seems pretty good
+
+#Residual analysis for forecast
+Acf(f_stl$residuals) #Removes the lag 0 which has the original data and will always be 1
+acf(f_stl$residuals)
+tmp <- Acf(f_stl$residuals)
+tmp
+
+#Shows that there is something non-random happening in M3, M4, M6
+f_stl$method
+#"STL +  ETS(M,A,N)" 
+
+#Plot original time series and what decomposition predicted
+plot(HospitalRevenue_ts)
+lines(f_stl$fitted, col = 'Red') 
+accuracy(f_stl) #MAPE is low at 1.523904
+
+#decomposition through stl function uses Loess function
+
+
+#Another way to run decomposition model#
+# There is more than one way to do things
+decomp_elec <- decompose(HospitalRevenue_ts) #Underlying math is different from stl function
+attributes(decomp_elec)
+decomp_elec
+
+?decompose
+decomp_elec$figure
+
+plot(stl_decomp)
+plot(decomp_elec) #Plot is little different from stl function
+
+seasadj(decomp_elec)
+#f_decomp <- forecast(decomp_elec,h=12) #Won't work - forecast only takes the stl component
+f_decomp <- forecast(seasadj(decomp_elec),h=12) #BUT can forecast seasonally adjusted (but takes seasonality out)
+
+plot(HospitalRevenue_ts)
+lines(f_decomp$fitted,col = 'purple')
+
+accuracy(f_decomp) #MAPE = 1.550416
+accuracy(f_stl) #MAPE = 1.523904
+#stl is better than decompositon - according to help it tells that the stl function is more sophisticated than decomposition function
+
+
+#HW - run on own data
+#if data doesn't have seasonality you may get an error because data doesn't have seasonality
+#Provide proof that there is no seasonality in data if that is true
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
